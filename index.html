@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Leagues VI: Demonic Pacts — Points Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Cinzel:wght@400;600;700&family=Share+Tech+Mono&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #06060f;
+    --surface: #0e0d1a;
+    --card: #13101f;
+    --card-hover: #1a162b;
+    --border: #2a2140;
+    --border-gold: rgba(212,175,55,0.25);
+    --gold: #d4af37;
+    --gold-dim: #8b7355;
+    --gold-glow: rgba(212,175,55,0.15);
+    --fire: #ff4500;
+    --fire-dim: #8b2200;
+    --text: #f0e6d0;
+    --text-dim: #a89070;
+    --text-muted: #6e5c42;
+    --red: #ff6b6b;
+    --font-display: 'Cinzel Decorative', serif;
+    --font-heading: 'Cinzel', serif;
+    --font-body: 'Crimson Text', Georgia, serif;
+    --font-mono: 'Share Tech Mono', monospace;
+    --r: 10px;
+    --r-sm: 6px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Atmospheric background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 15% 0%, rgba(180,40,10,0.09) 0%, transparent 100%),
+      radial-gradient(ellipse 50% 60% at 85% 100%, rgba(80,30,130,0.07) 0%, transparent 100%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(212,175,55,0.02) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .wrap { position: relative; z-index: 1; max-width: 1140px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── Header ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(6,6,15,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-gold);
+    padding: 14px 0;
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .site-title {
+    font-family: var(--font-display);
+    font-size: clamp(16px, 3vw, 22px);
+    color: var(--gold);
+    letter-spacing: 0.04em;
+    text-shadow: 0 0 25px rgba(212,175,55,0.5);
+    line-height: 1.2;
+  }
+
+  .site-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 3px;
+    letter-spacing: 0.1em;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .league-badge {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid;
+    letter-spacing: 0.05em;
+  }
+  .badge-live { border-color: rgba(255,69,0,0.5); color: var(--fire); background: rgba(255,69,0,0.08); animation: pulse 2s ease-in-out infinite; }
+  .badge-soon { border-color: rgba(212,175,55,0.4); color: var(--gold); background: var(--gold-glow); }
+  .badge-ended { border-color: var(--border); color: var(--text-dim); }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+
+  .refresh-info {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-refresh {
+    background: rgba(212,175,55,0.08);
+    border: 1px solid rgba(212,175,55,0.2);
+    color: var(--gold-dim);
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    transition: all 0.2s;
+  }
+  .btn-refresh:hover { background: var(--gold-glow); color: var(--gold); }
+  .btn-refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Progress bar ── */
+  .league-progress-wrap {
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid var(--border);
+    padding: 6px 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .progress-inner { display: flex; align-items: center; gap: 12px; }
+  .progress-track {
+    flex: 1;
+    height: 5px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(to right, #6b1500, #ff4500);
+    border-radius: 3px;
+    transition: width 1s ease;
+  }
+
+  /* ── Main content ── */
+  main { padding: 28px 0 60px; }
+
+  /* ── Add player section ── */
+  .add-section {
+    margin-bottom: 28px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px 24px;
+  }
+
+  .section-label {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .add-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    min-width: 180px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border-gold);
+    border-radius: var(--r-sm);
+    color: var(--text);
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus { border-color: rgba(212,175,55,0.6); }
+  input[type="text"]::placeholder { color: var(--text-muted); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.08));
+    border: 1px solid rgba(212,175,55,0.45);
+    color: var(--gold);
+    border-radius: var(--r-sm);
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-primary:hover { background: rgba(212,175,55,0.22); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .add-hint {
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+  .add-hint a { color: var(--gold-dim); text-decoration: none; }
+  .add-hint a:hover { color: var(--gold); }
+
+  .add-error {
+    margin-top: 8px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--red);
+  }
+
+  /* ── Player grid ── */
+  .player-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .player-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 18px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .player-card:hover { transform: translateY(-1px); }
+
+  .pc-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .color-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  .pc-name {
+    flex: 1;
+    font-family: var(--font-heading);
+    font-size: 14px;
+    color: var(--gold);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pc-actions { display: flex; gap: 2px; }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 3px 5px;
+    border-radius: 3px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+  .icon-btn:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .icon-btn.danger:hover { color: var(--red); }
+  .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .pc-points {
+    font-family: var(--font-mono);
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .pc-points-label {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    margin-left: 4px;
+  }
+
+  .pc-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .rank-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid;
+    letter-spacing: 0.04em;
+  }
+
+  .hiscore-rank {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .pc-error {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--red);
+    padding: 8px 0;
+    line-height: 1.5;
+  }
+
+  .pc-loading {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 16px 0;
+    text-align: center;
+  }
+
+  /* Regions */
+  .regions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 10px;
+  }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid;
+    letter-spacing: 0.03em;
+  }
+  .chip-free { border-color: rgba(255,100,50,0.3); color: #ff7f50; background: rgba(255,69,0,0.07); }
+  .chip-region { border-color: rgba(212,175,55,0.25); color: var(--gold); background: var(--gold-glow); }
+
+  /* Region editor */
+  .region-editor {
+    margin-top: 12px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 12px;
+  }
+
+  .re-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .re-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+
+  .re-btn {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    color: var(--gold-dim);
+    border-radius: 4px;
+    padding: 5px 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .re-btn:hover { background: rgba(212,175,55,0.07); }
+  .re-btn.selected { background: rgba(212,175,55,0.14); border-color: rgba(212,175,55,0.4); color: var(--gold); }
+  .re-btn.disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ── Chart section ── */
+  .chart-section {
+    background: var(--card);
+    border: 1px solid var(--border-gold);
+    border-radius: var(--r);
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .chart-title {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    color: var(--gold);
+    margin-bottom: 20px;
+    letter-spacing: 0.03em;
+  }
+
+  .chart-container { position: relative; height: 380px; }
+
+  .chart-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.8;
+    border: 1px dashed var(--border);
+    border-radius: var(--r-sm);
+  }
+
+  /* ── Rank guide ── */
+  .rank-section {
+    background: rgba(10,8,20,0.6);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 20px 24px;
+    margin-bottom: 28px;
+  }
+
+  .rank-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .rank-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid;
+    border-radius: var(--r-sm);
+  }
+
+  .rank-icon { font-size: 20px; }
+  .rank-name { font-family: var(--font-heading); font-size: 13px; font-weight: 600; }
+  .rank-pts { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .rank-note { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-top: 12px; }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 0;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.8;
+  }
+  footer a { color: var(--gold-dim); text-decoration: none; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card);
+    border: 1px solid rgba(212,175,55,0.3);
+    color: var(--text);
+    padding: 12px 18px;
+    border-radius: var(--r-sm);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s ease;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    .header-inner { flex-direction: column; gap: 10px; }
+    .player-grid { grid-template-columns: 1fr; }
+    .re-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+
+<!-- Header -->
+<header>
+  <div class="wrap">
+    <div class="header-inner">
+      <div>
+        <div class="site-title">⚔️ Demonic Pacts League</div>
+        <div class="site-sub">LEAGUES VI · POINTS TRACKER · APR 15 – JUN 10, 2026</div>
+      </div>
+      <div class="header-meta">
+        <span class="league-badge badge-soon" id="leagueBadge">⏳ Starting Apr 15</span>
+        <div class="refresh-info">
+          <span id="lastRefreshText">Not yet refreshed</span>
+          <button class="btn-refresh" id="refreshAllBtn" onclick="refreshAll()">↻ Refresh</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Progress bar -->
+<div class="league-progress-wrap" id="progressWrap" style="display:none">
+  <div class="wrap">
+    <div class="progress-inner">
+      <span id="progressLabel">Day 0 / 56</span>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <span id="progressPct">0%</span>
+    </div>
+  </div>
+</div>
+
+<!-- Demo banner -->
+<div id="demoBanner" style="display:none;background:rgba(212,175,55,0.08);border-bottom:1px solid rgba(212,175,55,0.2);padding:7px 0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:12px;color:#a89070;letter-spacing:0.06em">
+  🎭 DEMO MODE — Simulated 6-week progression. Set <code style="color:#d4af37;background:rgba(212,175,55,0.1);padding:1px 5px;border-radius:3px">DEMO_MODE = false</code> in the script to switch to live WOM data.
+</div>
+
+<main>
+  <div class="wrap">
+
+    <!-- Group header -->
+    <div class="add-section">
+      <div class="section-label">👥 The Group — Leagues VI: Demonic Pacts</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <div id="groupRoster" style="display:flex;flex-wrap:wrap;gap:6px;flex:1"></div>
+      </div>
+      <div class="add-hint" style="margin-top:10px">
+        Data sourced from <a href="https://wiseoldman.net" target="_blank">wiseoldman.net</a> · 
+        Region selections are not available via API — use the 🗺️ button on each card to set them manually.
+      </div>
+    </div>
+
+    <!-- Player cards -->
+    <div class="player-grid" id="playerGrid"></div>
+
+    <!-- Chart -->
+    <div class="chart-section" id="chartSection">
+      <div class="chart-title">📈 League Points Over Time</div>
+      <div class="chart-container">
+        <canvas id="pointsChart"></canvas>
+        <div class="chart-placeholder" id="chartPlaceholder">
+          📅 League begins April 15, 2026<br>The chart will populate automatically once players start earning points.
+        </div>
+      </div>
+    </div>
+
+    <!-- Rank Guide -->
+    <div class="rank-section">
+      <div class="section-label">🏆 Rank Thresholds</div>
+      <div class="rank-grid" id="rankGrid"></div>
+      <div class="rank-note">⚠ Thresholds estimated from Leagues V. Official Leagues VI thresholds will be confirmed after launch.</div>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    Data sourced from <a href="https://wiseoldman.net" target="_blank">Wise Old Man</a> ·
+    Auto-refreshes every hour ·
+    Leagues VI: Demonic Pacts · Apr 15 – Jun 10, 2026<br>
+    Region selections &amp; snapshot history stored in your browser (localStorage)
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+//  CONSTANTS
+// ════════════════════════════════════════════
+const LEAGUE_START = new Date('2026-04-15T00:00:00Z');
+const LEAGUE_END   = new Date('2026-06-10T23:59:59Z');
+const STORAGE_KEY  = 'l6_tracker_v2';
+const WOM_BASE     = 'https://api.wiseoldman.net/v2';
+const REFRESH_MS   = 10 * 60 * 1000; // 10 minutes
+const DEMO_MODE    = true;            // set false to use live WOM data
+
+const RANKS = [
+  { name:'Dragon',   min:180000, color:'#ff4500', text:'#ff6b35', emoji:'🐉', barImg:'https://oldschool.runescape.wiki/images/Dragon_sq_shield.png' },
+  { name:'Rune',     min:85000,  color:'#00bfff', text:'#5dade2', emoji:'⚔️', barImg:'https://oldschool.runescape.wiki/images/Runite_bar.png' },
+  { name:'Adamant',  min:42000,  color:'#2ecc71', text:'#58d68d', emoji:'🛡️', barImg:'https://oldschool.runescape.wiki/images/Adamantite_bar.png' },
+  { name:'Mithril',  min:18000,  color:'#9b59b6', text:'#bb8fce', emoji:'💎', barImg:'https://oldschool.runescape.wiki/images/Mithril_bar.png' },
+  { name:'Steel',    min:6500,   color:'#95a5a6', text:'#aab7b8', emoji:'⚒️', barImg:'https://oldschool.runescape.wiki/images/Steel_bar.png' },
+  { name:'Iron',     min:2000,   color:'#b87333', text:'#ca8a4e', emoji:'🔩', barImg:'https://oldschool.runescape.wiki/images/Iron_bar.png' },
+  { name:'Bronze',   min:500,    color:'#cd7f32', text:'#d4925b', emoji:'🏅', barImg:'https://oldschool.runescape.wiki/images/Bronze_bar.png' },
+  { name:'Unranked', min:0,      color:'#3a3a4a', text:'#666',    emoji:'🎮', barImg:null },
+];
+
+const REGIONS = [
+  { id:'asgarnia',     name:'Asgarnia',     emoji:'⚔️' },
+  { id:'desert',       name:'Desert',       emoji:'🏜️' },
+  { id:'kourend',      name:'Kourend & Kebos', emoji:'🏰' },
+  { id:'fremennik',    name:'Fremennik',    emoji:'❄️' },
+  { id:'kandarin',     name:'Kandarin',     emoji:'🌿' },
+  { id:'morytania',    name:'Morytania',    emoji:'🧛' },
+  { id:'tirannwn',     name:'Tirannwn',     emoji:'🧝' },
+  { id:'wilderness',   name:'Wilderness',   emoji:'💀' },
+];
+
+// Fixed group roster — colors assigned per player
+const FIXED_PLAYERS = [
+  { name:'Bigfordtruck', color:'#FFA07A' },
+  { name:'Fallen51',     color:'#FF6B6B' },
+  { name:'GIM_OakLogs',  color:'#87CEEB' },
+  { name:'GIM_Sawdust',  color:'#DDA0DD' },
+  { name:'GIM_SodaAsh',  color:'#90EE90' },
+  { name:'Lombres',      color:'#4ECDC4' },
+  { name:'Magn',         color:'#45B7D1' },
+  { name:'Needlesnatch', color:'#F0E68C' },
+];
+
+// ════════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════════
+let players = [];      // [{name, color, regions:[]}]
+let snapshots = {};    // {name: [{time, points}]}
+let latestData = {};   // {name: {points, hiscoreRank, updatedAt}}
+let loadingSet = new Set();
+let chartInstance = null;
+let refreshTimer = null;
+
+// ════════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════════
+function getRank(pts) {
+  for (const r of RANKS) if (pts >= r.min) return r;
+  return RANKS[RANKS.length - 1];
+}
+
+function fmtNum(n) {
+  if (n >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (n >= 1000) return (n/1000).toFixed(1)+'k';
+  return n.toLocaleString();
+}
+
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function fmtDateTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+function rankIcon(rank, size = 20) {
+  if (!rank.barImg) return rank.emoji;
+  return `<img src="${rank.barImg}" width="${size}" height="${size}"
+    style="image-rendering:pixelated;vertical-align:middle;object-fit:contain"
+    onerror="this.replaceWith(document.createTextNode('${rank.emoji}'))"
+    alt="${rank.name} bar">`;
+}
+
+function showToast(msg, ms = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+// ════════════════════════════════════════════
+//  PERSISTENCE
+// ════════════════════════════════════════════
+function loadState() {
+  // Load saved snapshots and any manually-set regions from localStorage
+  let savedRegions = {};
+  let savedSnaps   = {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const { pl, sn } = JSON.parse(raw);
+      if (pl) pl.forEach(p => { savedRegions[p.name] = p.regions || []; });
+      if (sn) savedSnaps = sn;
+    }
+  } catch(e) {}
+
+  // Always start from the fixed roster; restore regions if previously saved
+  players = FIXED_PLAYERS.map(fp => ({
+    name:    fp.name,
+    color:   fp.color,
+    regions: savedRegions[fp.name] || []
+  }));
+
+  snapshots = savedSnaps;
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ pl: players, sn: snapshots }));
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════
+//  DEMO DATA (6-week simulated league run)
+// ════════════════════════════════════════════
+function loadDemoData() {
+  const START = LEAGUE_START.getTime();
+  const TICK  = 6 * 60 * 60 * 1000; // snapshot every 6 hours
+
+  // Key milestones: points at days [0, 2, 5, 10, 17, 25, 33, 42]
+  const MDAYS = [0, 2, 5, 10, 17, 25, 33, 42];
+  const MILES = {
+    'GIM_Sawdust':  [0,  5500, 17000, 45000,  88000, 138000, 172000, 197000],
+    'Magn':         [0,  6000, 18000, 46000,  82000, 122000, 153000, 175000],
+    'Fallen51':     [0,  2800,  9500, 25000,  48000,  67000,  80000,  93000],
+    'Lombres':      [0,  2200,  8000, 22000,  43000,  62000,  77000,  89000],
+    'GIM_SodaAsh':  [0,  1400,  5500, 13500,  26000,  37000,  45000,  53000],
+    'Bigfordtruck': [0,  1100,  4500, 11500,  22000,  32000,  40000,  46000],
+    'GIM_OakLogs':  [0,   700,  2800,  7000,  12000,  16000,  19000,  21500],
+    'Needlesnatch': [0,   350,  1200,  2800,   4500,   6000,   7000,   7900],
+  };
+
+  // Deterministic pseudo-noise per player (no Math.random so data is stable on reload)
+  function noise(playerName, tick, amplitude) {
+    const seed = playerName.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return Math.sin(tick * 0.61803 + seed * 0.31415) * amplitude;
+  }
+
+  players.forEach(p => {
+    const miles = MILES[p.name];
+    if (!miles) return;
+
+    const maxPts = miles[miles.length - 1];
+    const snaps  = [];
+
+    for (let tick = 0; tick <= 42 * 4; tick++) {
+      const dayFrac = tick / 4;
+      const time    = START + tick * TICK;
+
+      // Find surrounding milestone pair
+      let mi = MDAYS.findIndex(d => d >= dayFrac);
+      if (mi <= 0)                    mi = 1;
+      if (mi >= MDAYS.length)         mi = MDAYS.length - 1;
+
+      const d0 = MDAYS[mi - 1], d1 = MDAYS[mi];
+      const p0 = miles[mi - 1],  p1 = miles[mi];
+      const t  = (dayFrac - d0) / (d1 - d0);
+
+      // Smooth ease-in-out interpolation
+      const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      const base  = p0 + (p1 - p0) * eased;
+
+      // Small sinusoidal ripple for natural feel (±0.8% of max)
+      const pts = Math.max(0, Math.round(base + noise(p.name, tick, maxPts * 0.008)));
+      snaps.push({ time, points: pts });
+    }
+
+    snapshots[p.name] = snaps;
+    const last = snaps[snaps.length - 1];
+    latestData[p.name] = {
+      points:      last.points,
+      hiscoreRank: -1,
+      updatedAt:   new Date(last.time)
+    };
+  });
+}
+
+// ════════════════════════════════════════════
+//  WOM API
+// ════════════════════════════════════════════
+const ERR_MESSAGES = {
+  404: 'Player not found on Wise Old Man — visit wiseoldman.net, search this username, and click "Update"',
+  429: 'Rate limited by Wise Old Man — will retry shortly',
+  503: 'Wise Old Man is temporarily unavailable',
+};
+
+async function womFetch(path, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const r = await fetch(WOM_BASE + path);
+    if (r.ok) return r.json();
+    if (r.status === 429 && attempt < retries) {
+      await new Promise(res => setTimeout(res, 3000 * (attempt + 1)));
+      continue;
+    }
+    throw new Error(ERR_MESSAGES[r.status] ?? `Wise Old Man error (HTTP ${r.status})`);
+  }
+}
+
+async function fetchPlayerCurrent(name) {
+  // Trigger a WOM update — fire and forget, don't let it block or error
+  fetch(`${WOM_BASE}/players/${encodeURIComponent(name.toLowerCase())}/update`, { method:'POST' })
+    .catch(() => {});
+  const data = await womFetch(`/players/${encodeURIComponent(name.toLowerCase())}`);
+  const lp = data.latestSnapshot?.data?.activities?.league_points;
+  return {
+    points:      lp?.score ?? 0,
+    hiscoreRank: lp?.rank  ?? -1,
+    updatedAt:   data.updatedAt
+  };
+}
+
+async function fetchPlayerHistory(name) {
+  const s = LEAGUE_START.toISOString();
+  const e = new Date(LEAGUE_END.getTime() + 86400000).toISOString();
+  let snaps = [];
+  try {
+    snaps = await womFetch(`/players/${encodeURIComponent(name.toLowerCase())}/snapshots?startDate=${s}&endDate=${e}`);
+  } catch {
+    // Fall back to recent period
+    try {
+      snaps = await womFetch(`/players/${encodeURIComponent(name.toLowerCase())}/snapshots?period=3months`);
+    } catch {}
+  }
+  if (!Array.isArray(snaps)) return [];
+  return snaps
+    .filter(s => (s.data?.activities?.league_points?.score ?? 0) >= 0)
+    .map(s => ({
+      time:   new Date(s.createdAt).getTime(),
+      points: s.data?.activities?.league_points?.score ?? 0
+    }))
+    .sort((a,b) => a.time - b.time);
+}
+
+async function refreshPlayer(name) {
+  if (DEMO_MODE) { renderPlayerCard(name); return; }
+  if (loadingSet.has(name)) return;
+  loadingSet.add(name);
+  renderPlayerCard(name);
+
+  try {
+    const [current, history] = await Promise.all([
+      fetchPlayerCurrent(name),
+      fetchPlayerHistory(name)
+    ]);
+
+    latestData[name] = {
+      points:      current.points,
+      hiscoreRank: current.hiscoreRank,
+      updatedAt:   new Date()
+    };
+
+    // Merge history with new current point
+    const now = Date.now();
+    const merged = [...history];
+    const lastTime = merged[merged.length-1]?.time ?? 0;
+    if (now - lastTime > 25 * 60 * 1000) {
+      merged.push({ time: now, points: current.points });
+    }
+    snapshots[name] = merged;
+    saveState();
+
+  } catch(err) {
+    latestData[name] = { error: err.message };
+  }
+
+  loadingSet.delete(name);
+  renderPlayerCard(name);
+  updateChart();
+}
+
+// ════════════════════════════════════════════
+//  GROUP ROSTER (static pill display)
+// ════════════════════════════════════════════
+function renderGroupRoster() {
+  const el = document.getElementById('groupRoster');
+  if (!el) return;
+  el.innerHTML = players.map(p => `
+    <span style="
+      display:inline-flex;align-items:center;gap:5px;
+      background:${p.color}18;border:1px solid ${p.color}44;
+      border-radius:20px;padding:4px 12px;
+      font-family:var(--font-mono);font-size:12px;color:${p.color};
+      white-space:nowrap;
+    ">
+      <span style="width:7px;height:7px;border-radius:50%;background:${p.color};box-shadow:0 0 6px ${p.color};flex-shrink:0"></span>
+      ${p.name}
+    </span>`).join('');
+}
+
+function toggleRegion(playerName, regionId) {
+  const p = players.find(p => p.name === playerName);
+  if (!p) return;
+  if (p.regions.includes(regionId)) {
+    p.regions = p.regions.filter(r => r !== regionId);
+  } else if (p.regions.length < 3) {
+    p.regions = [...p.regions, regionId];
+  }
+  saveState();
+  renderPlayerCard(playerName);
+}
+
+// ════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════
+function renderPlayerGrid() {
+  const grid = document.getElementById('playerGrid');
+  grid.innerHTML = '';
+  players.forEach(p => {
+    const div = document.createElement('div');
+    div.id = `card-${CSS.escape(p.name)}`;
+    div.className = 'player-card';
+    div.style.borderColor = p.color + '44';
+    grid.appendChild(div);
+    renderPlayerCard(p.name);
+  });
+}
+
+function renderPlayerCard(name) {
+  const p    = players.find(p => p.name === name);
+  if (!p) return;
+  const card = document.getElementById(`card-${CSS.escape(name)}`);
+  if (!card) return;
+
+  const data    = latestData[name];
+  const loading = loadingSet.has(name);
+  const points  = data?.points ?? 0;
+  const rank    = getRank(points);
+  const editId  = `re-${CSS.escape(name)}`;
+
+  let bodyHtml = '';
+
+  if (loading && !data) {
+    bodyHtml = `<div class="pc-loading">⏳ Loading…</div>`;
+  } else if (data?.error) {
+    bodyHtml = `<div class="pc-error">✕ ${data.error}<br><small style="color:var(--text-muted)">
+      Make sure this player is tracked at <a href="https://wiseoldman.net" target="_blank" style="color:var(--gold-dim)">wiseoldman.net</a></small></div>`;
+  } else {
+    bodyHtml = `
+      <div class="pc-points">
+        <span style="color:${p.color}">${fmtNum(points)}</span>
+        <span class="pc-points-label">pts</span>
+      </div>
+      <div class="pc-badges">
+        <span class="rank-badge" style="color:${rank.text};border-color:${rank.color}55;background:${rank.color}14">
+          ${rankIcon(rank, 16)} ${rank.name}
+        </span>
+        ${data?.hiscoreRank > 0 ? `<span class="hiscore-rank">#${data.hiscoreRank.toLocaleString()}</span>` : ''}
+      </div>`;
+  }
+
+  // Regions display
+  let regHtml = `<div class="regions-row">
+    <span class="chip chip-free">Varlamore</span>
+    <span class="chip chip-free">Karamja</span>
+    ${p.regions.map(rid => {
+      const reg = REGIONS.find(r => r.id === rid);
+      return reg ? `<span class="chip chip-region">${reg.emoji} ${reg.name}</span>` : '';
+    }).join('')}
+  </div>`;
+
+  // Check if region editor is currently open
+  const editorOpen = document.getElementById(editId);
+
+  let editorHtml = '';
+  if (editorOpen) {
+    editorHtml = `<div class="region-editor" id="${editId}">
+      <div class="re-title">Select up to 3 regions (${p.regions.length}/3 chosen)</div>
+      <div class="re-grid">
+        ${REGIONS.map(reg => {
+          const sel  = p.regions.includes(reg.id);
+          const full = p.regions.length >= 3 && !sel;
+          return `<button class="re-btn${sel?' selected':''}${full?' disabled':''}"
+            onclick="toggleRegion('${name.replace(/'/g,"\\'")}','${reg.id}')">
+            ${reg.emoji} ${reg.name}
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  card.innerHTML = `
+    <div class="pc-header">
+      <div class="color-dot" style="background:${p.color};color:${p.color}"></div>
+      <span class="pc-name" title="${name}">${name}</span>
+      <div class="pc-actions">
+        <button class="icon-btn" onclick="toggleRegionEditor('${name.replace(/'/g,"\\'")}','${editId}')" title="Edit regions">🗺️</button>
+        <button class="icon-btn${loading?' ':''}" onclick="refreshPlayer('${name.replace(/'/g,"\\'")}');" title="Refresh" ${loading?'disabled':''}>
+          ${loading ? '⏳' : '↻'}
+        </button>
+      </div>
+    </div>
+    ${bodyHtml}
+    ${regHtml}
+    ${editorHtml}
+  `;
+}
+
+function toggleRegionEditor(name, editId) {
+  const existing = document.getElementById(editId);
+  if (existing) {
+    existing.remove();
+  } else {
+    renderPlayerCard(name); // will not open editor
+    // Force open by temporarily marking
+    const card = document.getElementById(`card-${CSS.escape(name)}`);
+    if (!card) return;
+    // Inject editor
+    const reg = document.createElement('div');
+    reg.id = editId;
+    reg.className = 'region-editor';
+    const p = players.find(p => p.name === name);
+    reg.innerHTML = `
+      <div class="re-title">Select up to 3 regions (${p.regions.length}/3 chosen)</div>
+      <div class="re-grid">
+        ${REGIONS.map(r => {
+          const sel  = p.regions.includes(r.id);
+          const full = p.regions.length >= 3 && !sel;
+          return `<button class="re-btn${sel?' selected':''}${full?' disabled':''}"
+            onclick="toggleRegion('${name.replace(/'/g,"\\'")}','${r.id}')">
+            ${r.emoji} ${r.name}
+          </button>`;
+        }).join('')}
+      </div>`;
+    card.appendChild(reg);
+  }
+}
+
+// ════════════════════════════════════════════
+//  CHART
+// ════════════════════════════════════════════
+function buildChartData() {
+  if (players.length === 0) return null;
+  const allTimes = new Set();
+  players.forEach(p => (snapshots[p.name] ?? []).forEach(s => allTimes.add(s.time)));
+  if (allTimes.size < 2) return null;
+
+  const sorted = [...allTimes].sort((a,b) => a-b);
+
+  const datasets = players.map(p => {
+    const hist = snapshots[p.name] ?? [];
+    return {
+      label:       p.name,
+      data:        sorted.map(t => {
+        const snap = [...hist].reverse().find(h => h.time <= t);
+        return { x: t, y: snap?.points ?? null };
+      }),
+      borderColor:     p.color,
+      backgroundColor: p.color + '22',
+      borderWidth: 2.5,
+      pointRadius: 0,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      fill: false,
+      spanGaps: true
+    };
+  });
+
+  return { datasets };
+}
+
+function updateChart() {
+  const canvas      = document.getElementById('pointsChart');
+  const placeholder = document.getElementById('chartPlaceholder');
+
+  if (players.length === 0) {
+    canvas.style.display = 'none';
+    placeholder.style.display = 'flex';
+    placeholder.innerHTML = '📅 Add players above — their points will be tracked here once the league starts.';
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    return;
+  }
+
+  const chartData = buildChartData();
+  if (!chartData) {
+    canvas.style.display = 'none';
+    placeholder.style.display = 'flex';
+    const now = Date.now();
+    placeholder.innerHTML = now < LEAGUE_START.getTime()
+      ? `📅 League begins <strong style="color:var(--gold)">April 15, 2026</strong><br>Check back then — data will appear automatically once players start earning points.`
+      : `📊 Waiting for WOM data… Players may need to be updated on <a href="https://wiseoldman.net" target="_blank" style="color:var(--gold-dim)">wiseoldman.net</a>`;
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+    return;
+  }
+
+  canvas.style.display = 'block';
+  placeholder.style.display = 'none';
+
+  const rankAnnotations = RANKS.filter(r => r.min > 0).map(r => ({
+    type:     'line',
+    yMin:     r.min,
+    yMax:     r.min,
+    borderColor: r.color + '33',
+    borderWidth: 1,
+    borderDash: [4,4],
+    label: {
+      display: true,
+      content: `${r.emoji} ${r.name}`,
+      color:   r.text + 'aa',
+      font:    { family: "'Share Tech Mono', monospace", size: 10 },
+      position: 'end',
+      backgroundColor: 'transparent'
+    }
+  }));
+
+  const cfg = {
+    type: 'line',
+    data: chartData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          type: 'linear',
+          min:  LEAGUE_START.getTime(),
+          max:  LEAGUE_END.getTime(),
+          ticks: {
+            callback: v => fmtDate(v),
+            color: '#554433',
+            font: { family: "'Share Tech Mono', monospace", size: 11 },
+            maxTicksLimit: 10
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        },
+        y: {
+          ticks: {
+            callback: v => fmtNum(v),
+            color: '#554433',
+            font: { family: "'Share Tech Mono', monospace", size: 11 }
+          },
+          grid: { color: 'rgba(255,255,255,0.04)' }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: {
+            color: '#8b7355',
+            font: { family: "'Share Tech Mono', monospace", size: 12 },
+            boxWidth: 12,
+            padding: 16
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(8,6,16,0.95)',
+          borderColor: 'rgba(212,175,55,0.3)',
+          borderWidth: 1,
+          titleColor: '#d4af37',
+          bodyColor: '#e8d5b7',
+          titleFont: { family: "'Share Tech Mono', monospace", size: 11 },
+          bodyFont:  { family: "'Share Tech Mono', monospace", size: 12 },
+          callbacks: {
+            title: items => fmtDateTime(items[0].parsed.x),
+            label: item => {
+              const pts   = item.parsed.y;
+              const rank  = getRank(pts ?? 0);
+              return ` ${item.dataset.label}: ${fmtNum(pts ?? 0)} pts (${rank.emoji} ${rank.name})`;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  if (chartInstance) {
+    chartInstance.data    = chartData;
+    chartInstance.options = cfg.options;
+    chartInstance.update();
+  } else {
+    chartInstance = new Chart(canvas, cfg);
+  }
+}
+
+// ════════════════════════════════════════════
+//  RANK GUIDE
+// ════════════════════════════════════════════
+function renderRankGuide() {
+  const grid = document.getElementById('rankGrid');
+  grid.innerHTML = RANKS.filter(r => r.min > 0).map(r => `
+    <div class="rank-item" style="border-color:${r.color}44">
+      <span class="rank-icon">${rankIcon(r, 28)}</span>
+      <div>
+        <div class="rank-name" style="color:${r.text}">${r.name}</div>
+        <div class="rank-pts">${r.min.toLocaleString()}+ pts</div>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════
+//  LEAGUE STATUS BAR
+// ════════════════════════════════════════════
+function updateLeagueStatus() {
+  const now   = Date.now();
+  const badge = document.getElementById('leagueBadge');
+  const progW = document.getElementById('progressWrap');
+  const fill  = document.getElementById('progressFill');
+  const lbl   = document.getElementById('progressLabel');
+  const pct   = document.getElementById('progressPct');
+
+  const start = LEAGUE_START.getTime();
+  const end   = LEAGUE_END.getTime();
+  const total = end - start;
+
+  if (now < start) {
+    badge.className = 'league-badge badge-soon';
+    badge.textContent = '⏳ Starting Apr 15';
+    progW.style.display = 'none';
+  } else if (now > end) {
+    badge.className = 'league-badge badge-ended';
+    badge.textContent = '⏹ League Ended';
+    progW.style.display = 'block';
+    fill.style.width = '100%';
+    lbl.textContent  = 'Ended';
+    pct.textContent  = '100%';
+  } else {
+    badge.className = 'league-badge badge-live';
+    badge.textContent = '🔥 Live Now';
+    const elapsed = now - start;
+    const days    = Math.floor(elapsed / 86400000);
+    const pctVal  = Math.min(100, (elapsed / total * 100)).toFixed(1);
+    progW.style.display = 'block';
+    fill.style.width = pctVal + '%';
+    lbl.textContent  = `Day ${days} / 56`;
+    pct.textContent  = pctVal + '%';
+  }
+}
+
+// ════════════════════════════════════════════
+//  REFRESH ALL
+// ════════════════════════════════════════════
+async function refreshAll() {
+  const btn = document.getElementById('refreshAllBtn');
+
+  if (DEMO_MODE) {
+    players.forEach(p => renderPlayerCard(p.name));
+    updateChart();
+    document.getElementById('lastRefreshText').textContent = 'Demo mode — simulated data';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Refreshing…';
+
+  // Stagger requests 1.5s apart to avoid WOM rate limiting
+  for (let i = 0; i < players.length; i++) {
+    if (i > 0) await new Promise(res => setTimeout(res, 1500));
+    refreshPlayer(players[i].name); // intentionally not awaited — cards update live
+  }
+
+  // Wait for all in-flight fetches to settle before updating the timestamp
+  await new Promise(res => setTimeout(res, 1500 * players.length + 3000));
+
+  document.getElementById('lastRefreshText').textContent =
+    `Updated ${new Date().toLocaleTimeString()}`;
+  showToast('✓ All players refreshed');
+  btn.disabled = false;
+  btn.textContent = '↻ Refresh';
+}
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+function init() {
+  loadState();
+
+  if (DEMO_MODE) {
+    loadDemoData();
+    document.getElementById('demoBanner').style.display = 'block';
+    // Fake the league status as live at week 6 for demo
+    const badge = document.getElementById('leagueBadge');
+    badge.className = 'league-badge badge-live';
+    badge.textContent = '🎭 Demo Mode';
+    const progW = document.getElementById('progressWrap');
+    progW.style.display = 'block';
+    document.getElementById('progressFill').style.width = '85%';
+    document.getElementById('progressLabel').textContent = 'Day 36 / 56 (simulated)';
+    document.getElementById('progressPct').textContent = '85%';
+    document.getElementById('lastRefreshText').textContent = 'Demo mode — simulated data';
+  } else {
+    updateLeagueStatus();
+  }
+
+  renderRankGuide();
+  renderGroupRoster();
+  renderPlayerGrid();
+  updateChart();
+
+  if (!DEMO_MODE) {
+    refreshAll();
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(refreshAll, REFRESH_MS);
+    setInterval(updateLeagueStatus, 60000);
+  }
+}
+
+init();
+</script>
+</body>
+</html>
