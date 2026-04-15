@@ -364,62 +364,6 @@
     text-align: center;
   }
 
-  /* Regions */
-  .regions-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 10px;
-  }
-
-  .chip {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    padding: 2px 7px;
-    border-radius: 3px;
-    border: 1px solid;
-    letter-spacing: 0.03em;
-  }
-  .chip-free { border-color: rgba(255,100,50,0.3); color: #ff7f50; background: rgba(255,69,0,0.07); }
-  .chip-region { border-color: rgba(212,175,55,0.25); color: var(--gold); background: var(--gold-glow); }
-
-  /* Region editor */
-  .region-editor {
-    margin-top: 12px;
-    background: rgba(0,0,0,0.35);
-    border: 1px solid var(--border);
-    border-radius: var(--r-sm);
-    padding: 12px;
-  }
-
-  .re-title {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-bottom: 8px;
-  }
-
-  .re-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-  }
-
-  .re-btn {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    color: var(--gold-dim);
-    border-radius: 4px;
-    padding: 5px 8px;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    cursor: pointer;
-    text-align: left;
-    transition: all 0.15s;
-  }
-  .re-btn:hover { background: rgba(212,175,55,0.07); }
-  .re-btn.selected { background: rgba(212,175,55,0.14); border-color: rgba(212,175,55,0.4); color: var(--gold); }
-  .re-btn.disabled { opacity: 0.3; cursor: not-allowed; }
 
   /* ── Chart section ── */
   .chart-section {
@@ -524,7 +468,6 @@
   @media (max-width: 600px) {
     .header-inner { flex-direction: column; gap: 10px; }
     .player-grid { grid-template-columns: 1fr; }
-    .re-grid { grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
@@ -561,10 +504,6 @@
   </div>
 </div>
 
-<!-- Demo banner -->
-<div id="demoBanner" style="display:none;background:rgba(212,175,55,0.08);border-bottom:1px solid rgba(212,175,55,0.2);padding:7px 0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:12px;color:#a89070;letter-spacing:0.06em">
-  🎭 DEMO MODE — Simulated 6-week progression. Set <code style="color:#d4af37;background:rgba(212,175,55,0.1);padding:1px 5px;border-radius:3px">DEMO_MODE = false</code> in the script to switch to live WOM data.
-</div>
 
 <main>
   <div class="wrap">
@@ -574,10 +513,6 @@
       <div class="section-label">Leagues VI: Demonic Pacts</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
         <div id="groupRoster" style="display:flex;flex-wrap:wrap;gap:6px;flex:1"></div>
-      </div>
-      <div class="add-hint" style="margin-top:10px">
-        Data sourced from <a href="https://wiseoldman.net" target="_blank">wiseoldman.net</a> · 
-        Region selections are not available via API — use the 🗺️ button on each card to set them manually.
       </div>
     </div>
 
@@ -609,8 +544,7 @@
   <div class="wrap">
     Data sourced from <a href="https://wiseoldman.net" target="_blank">Wise Old Man</a> ·
     Auto-refreshes every hour ·
-    Leagues VI: Demonic Pacts · Apr 15 – Jun 10, 2026<br>
-    Region selections &amp; snapshot history stored in your browser (localStorage)
+    Leagues VI: Demonic Pacts · Apr 15 – Jun 10, 2026
   </div>
 </footer>
 
@@ -625,7 +559,6 @@ const LEAGUE_END   = new Date('2026-06-10T23:59:59Z');
 const STORAGE_KEY  = 'l6_tracker_v2';
 const WOM_BASE     = 'https://api.wiseoldman.net/v2';
 const REFRESH_MS   = 10 * 60 * 1000; // 10 minutes
-const DEMO_MODE    = true;            // set false to use live WOM data
 
 const RANKS = [
   { name:'Dragon',   min:180000, color:'#ff4500', text:'#ff6b35', emoji:'🐉', barImg:'https://oldschool.runescape.wiki/images/Dragon_sq_shield.png' },
@@ -636,17 +569,6 @@ const RANKS = [
   { name:'Iron',     min:2000,   color:'#b87333', text:'#ca8a4e', emoji:'🔩', barImg:'https://oldschool.runescape.wiki/images/Iron_bar.png' },
   { name:'Bronze',   min:500,    color:'#cd7f32', text:'#d4925b', emoji:'🏅', barImg:'https://oldschool.runescape.wiki/images/Bronze_bar.png' },
   { name:'Unranked', min:0,      color:'#3a3a4a', text:'#666',    emoji:'🎮', barImg:null },
-];
-
-const REGIONS = [
-  { id:'asgarnia',     name:'Asgarnia',     emoji:'⚔️' },
-  { id:'desert',       name:'Desert',       emoji:'🏜️' },
-  { id:'kourend',      name:'Kourend & Kebos', emoji:'🏰' },
-  { id:'fremennik',    name:'Fremennik',    emoji:'❄️' },
-  { id:'kandarin',     name:'Kandarin',     emoji:'🌿' },
-  { id:'morytania',    name:'Morytania',    emoji:'🧛' },
-  { id:'tirannwn',     name:'Tirannwn',     emoji:'🧝' },
-  { id:'wilderness',   name:'Wilderness',   emoji:'💀' },
 ];
 
 // Fixed group roster — colors assigned per player
@@ -664,7 +586,7 @@ const FIXED_PLAYERS = [
 // ════════════════════════════════════════════
 //  STATE
 // ════════════════════════════════════════════
-let players = [];      // [{name, color, regions:[]}]
+let players = [];      // [{name, color}]
 let snapshots = {};    // {name: [{time, points}]}
 let latestData = {};   // {name: {points, hiscoreRank, updatedAt}}
 let loadingSet = new Set();
@@ -714,26 +636,15 @@ function showToast(msg, ms = 3000) {
 //  PERSISTENCE
 // ════════════════════════════════════════════
 function loadState() {
-  // Load saved snapshots and any manually-set regions from localStorage
-  let savedRegions = {};
-  let savedSnaps   = {};
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const { pl, sn } = JSON.parse(raw);
-      if (pl) pl.forEach(p => { savedRegions[p.name] = p.regions || []; });
-      if (sn) savedSnaps = sn;
+      const { sn } = JSON.parse(raw);
+      if (sn) snapshots = sn;
     }
   } catch(e) {}
 
-  // Always start from the fixed roster; restore regions if previously saved
-  players = FIXED_PLAYERS.map(fp => ({
-    name:    fp.name,
-    color:   fp.color,
-    regions: savedRegions[fp.name] || []
-  }));
-
-  snapshots = savedSnaps;
+  players = FIXED_PLAYERS.map(fp => ({ name: fp.name, color: fp.color }));
 }
 
 function saveState() {
@@ -743,7 +654,7 @@ function saveState() {
 }
 
 // ════════════════════════════════════════════
-//  DEMO DATA (6-week simulated league run)
+//  SIMULATED DATA (6-week league progression)
 // ════════════════════════════════════════════
 function loadDemoData() {
   const START = LEAGUE_START.getTime();
@@ -864,7 +775,6 @@ async function fetchPlayerHistory(name) {
 }
 
 async function refreshPlayer(name) {
-  if (DEMO_MODE) { renderPlayerCard(name); return; }
   if (loadingSet.has(name)) return;
   loadingSet.add(name);
   renderPlayerCard(name);
@@ -919,18 +829,6 @@ function renderGroupRoster() {
     </span>`).join('');
 }
 
-function toggleRegion(playerName, regionId) {
-  const p = players.find(p => p.name === playerName);
-  if (!p) return;
-  if (p.regions.includes(regionId)) {
-    p.regions = p.regions.filter(r => r !== regionId);
-  } else if (p.regions.length < 3) {
-    p.regions = [...p.regions, regionId];
-  }
-  saveState();
-  renderPlayerCard(playerName);
-}
-
 // ════════════════════════════════════════════
 //  RENDER
 // ════════════════════════════════════════════
@@ -957,7 +855,6 @@ function renderPlayerCard(name) {
   const loading = loadingSet.has(name);
   const points  = data?.points ?? 0;
   const rank    = getRank(points);
-  const editId  = `re-${CSS.escape(name)}`;
 
   let bodyHtml = '';
 
@@ -980,81 +877,18 @@ function renderPlayerCard(name) {
       </div>`;
   }
 
-  // Regions display
-  let regHtml = `<div class="regions-row">
-    <span class="chip chip-free">Varlamore</span>
-    <span class="chip chip-free">Karamja</span>
-    ${p.regions.map(rid => {
-      const reg = REGIONS.find(r => r.id === rid);
-      return reg ? `<span class="chip chip-region">${reg.emoji} ${reg.name}</span>` : '';
-    }).join('')}
-  </div>`;
-
-  // Check if region editor is currently open
-  const editorOpen = document.getElementById(editId);
-
-  let editorHtml = '';
-  if (editorOpen) {
-    editorHtml = `<div class="region-editor" id="${editId}">
-      <div class="re-title">Select up to 3 regions (${p.regions.length}/3 chosen)</div>
-      <div class="re-grid">
-        ${REGIONS.map(reg => {
-          const sel  = p.regions.includes(reg.id);
-          const full = p.regions.length >= 3 && !sel;
-          return `<button class="re-btn${sel?' selected':''}${full?' disabled':''}"
-            onclick="toggleRegion('${name.replace(/'/g,"\\'")}','${reg.id}')">
-            ${reg.emoji} ${reg.name}
-          </button>`;
-        }).join('')}
-      </div>
-    </div>`;
-  }
-
   card.innerHTML = `
     <div class="pc-header">
       <div class="color-dot" style="background:${p.color};color:${p.color}"></div>
       <span class="pc-name" title="${name}">${name}</span>
       <div class="pc-actions">
-        <button class="icon-btn" onclick="toggleRegionEditor('${name.replace(/'/g,"\\'")}','${editId}')" title="Edit regions">🗺️</button>
         <button class="icon-btn${loading?' ':''}" onclick="refreshPlayer('${name.replace(/'/g,"\\'")}');" title="Refresh" ${loading?'disabled':''}>
           ${loading ? '⏳' : '↻'}
         </button>
       </div>
     </div>
     ${bodyHtml}
-    ${regHtml}
-    ${editorHtml}
   `;
-}
-
-function toggleRegionEditor(name, editId) {
-  const existing = document.getElementById(editId);
-  if (existing) {
-    existing.remove();
-  } else {
-    renderPlayerCard(name); // will not open editor
-    // Force open by temporarily marking
-    const card = document.getElementById(`card-${CSS.escape(name)}`);
-    if (!card) return;
-    // Inject editor
-    const reg = document.createElement('div');
-    reg.id = editId;
-    reg.className = 'region-editor';
-    const p = players.find(p => p.name === name);
-    reg.innerHTML = `
-      <div class="re-title">Select up to 3 regions (${p.regions.length}/3 chosen)</div>
-      <div class="re-grid">
-        ${REGIONS.map(r => {
-          const sel  = p.regions.includes(r.id);
-          const full = p.regions.length >= 3 && !sel;
-          return `<button class="re-btn${sel?' selected':''}${full?' disabled':''}"
-            onclick="toggleRegion('${name.replace(/'/g,"\\'")}','${r.id}')">
-            ${r.emoji} ${r.name}
-          </button>`;
-        }).join('')}
-      </div>`;
-    card.appendChild(reg);
-  }
 }
 
 // ════════════════════════════════════════════
@@ -1260,33 +1094,11 @@ function updateLeagueStatus() {
 // ════════════════════════════════════════════
 //  REFRESH ALL
 // ════════════════════════════════════════════
-async function refreshAll() {
-  const btn = document.getElementById('refreshAllBtn');
-
-  if (DEMO_MODE) {
-    players.forEach(p => renderPlayerCard(p.name));
-    updateChart();
-    document.getElementById('lastRefreshText').textContent = 'Demo mode — simulated data';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = '⏳ Refreshing…';
-
-  // Stagger requests 1.5s apart to avoid WOM rate limiting
-  for (let i = 0; i < players.length; i++) {
-    if (i > 0) await new Promise(res => setTimeout(res, 1500));
-    refreshPlayer(players[i].name); // intentionally not awaited — cards update live
-  }
-
-  // Wait for all in-flight fetches to settle before updating the timestamp
-  await new Promise(res => setTimeout(res, 1500 * players.length + 3000));
-
+function refreshAll() {
+  players.forEach(p => renderPlayerCard(p.name));
+  updateChart();
   document.getElementById('lastRefreshText').textContent =
     `Updated ${new Date().toLocaleTimeString()}`;
-  showToast('✓ All players refreshed');
-  btn.disabled = false;
-  btn.textContent = '↻ Refresh';
 }
 
 // ════════════════════════════════════════════
@@ -1294,35 +1106,13 @@ async function refreshAll() {
 // ════════════════════════════════════════════
 function init() {
   loadState();
-
-  if (DEMO_MODE) {
-    loadDemoData();
-    document.getElementById('demoBanner').style.display = 'block';
-    // Fake the league status as live at week 6 for demo
-    const badge = document.getElementById('leagueBadge');
-    badge.className = 'league-badge badge-live';
-    badge.textContent = '🎭 Demo Mode';
-    const progW = document.getElementById('progressWrap');
-    progW.style.display = 'block';
-    document.getElementById('progressFill').style.width = '85%';
-    document.getElementById('progressLabel').textContent = 'Day 36 / 56 (simulated)';
-    document.getElementById('progressPct').textContent = '85%';
-    document.getElementById('lastRefreshText').textContent = 'Demo mode — simulated data';
-  } else {
-    updateLeagueStatus();
-  }
-
+  loadDemoData();
+  updateLeagueStatus();
   renderRankGuide();
   renderGroupRoster();
   renderPlayerGrid();
   updateChart();
-
-  if (!DEMO_MODE) {
-    refreshAll();
-    clearInterval(refreshTimer);
-    refreshTimer = setInterval(refreshAll, REFRESH_MS);
-    setInterval(updateLeagueStatus, 60000);
-  }
+  setInterval(updateLeagueStatus, 60000);
 }
 
 init();
